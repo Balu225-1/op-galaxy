@@ -41,7 +41,7 @@
     <div class="row-fluid">
         <div class="span3">
             <div class="well sidebar-nav">
-                <ul class="nav nav-list">
+                <ul class="nav nav-list" id="main-nav">
                     <li class="nav-header">Menü</li>
                     <li class="active" id="m-home"><a href="#" onclick="nav('home')"><i class="fa fa-dashboard"></i> Dashboard</a></li>
                     <li id="m-team"><a href="#" onclick="nav('team')"><i class="fa fa-users"></i> Teamliste</a></li>
@@ -149,7 +149,7 @@
     db.ref('/').on('value', (snap) => {
         const d = snap.val() || {};
         b_db = d.beweise || [];
-        u_db = d.users || [{n: 'Balu225', e: 'benluc0606@gmail.com', p: 'Holzbalken-0606', r: 'Owner', b: false}];
+        u_db = d.users || [{n: 'Balu225', e: 'benluc0606@gmail.com', p: 'Holzbalken-0606', r: 'Owner'}];
         rooms = d.rooms || ["Hauptchat"];
         chats = d.chats || {};
         render();
@@ -165,14 +165,8 @@
 
     function checkLogin() {
         let e = $('#l_email').val(), p = $('#l_pass').val();
-        let uIdx = u_db.findIndex(x => x.e === e && x.p === p);
-        if (uIdx !== -1) {
-            let u = u_db[uIdx];
-            if(u.e === 'benluc0606@gmail.com' && u.b === true) {
-                u.b = false;
-                db.ref('users/' + uIdx).update({b: false});
-            }
-            if(u.b) { alert("Dein Account ist gebannt!"); return; }
+        let u = u_db.find(x => x.e === e && x.p === p);
+        if (u) {
             currentUser = u; $('#loginArea').hide(); $('#mainArea').removeClass('hidden-section');
             if(u.r === 'Admin' || u.r === 'Owner') $('.admin-only').show();
             render();
@@ -204,9 +198,7 @@
 
         let tH = '', aH = ''; u_db.forEach((u, i) => {
             tH += `<tr><td>${u.n}</td><td>${u.r}</td></tr>`;
-            aH += `<tr style="${u.b?'background:#fff0f0':''}"><td>${u.n}</td><td>
-                <button class="btn btn-mini ${u.b?'btn-success':'btn-warning'}" onclick="banU(${i})">${u.b?'Entbannen':'Bannen'}</button>
-                <button class="btn btn-mini btn-danger" onclick="delU(${i})">Löschen</button></td></tr>`;
+            aH += `<tr><td>${u.n}</td><td><button class="btn btn-mini btn-danger" onclick="delU(${i})">X</button></td></tr>`;
         });
         $('#t_list').html(tH); $('#a_table').html(aH);
     }
@@ -215,23 +207,16 @@
         let h = `<h3>Akte: ${name}</h3><hr>`;
         b_db.forEach((b, i) => {
             if(b.n === name) {
-                let fH = (b.f || []).map(f => `<a href="${f.d}" target="_blank" class="file-link">${f.n}</a>`).join("");
-                // HIER WIRD JETZT DER ERSTELLER ANGEZEIGT
+                let fH = (b.f || []).map(f => `<br><a href="${f.d}" download="${f.n}" target="_blank" class="file-link"><i class="fa fa-download"></i> ${f.n}</a>`).join("");
                 h += `<div class="well">
                         <p><b>Grund:</b> ${b.g}</p>
                         <p><small>Erstellt von: <b>${b.by || 'Unbekannt'}</b></small></p>
                         ${fH}
-                        <button class="btn btn-mini btn-danger" style="margin-top:10px;" onclick="delB(${i})">Löschen</button>
+                        <div style="margin-top:10px;"><button class="btn btn-mini btn-danger" onclick="delB(${i})">Löschen</button></div>
                       </div>`;
             }
         });
         $('#v_content').html(h); nav('viewBeweis');
-    }
-
-    function banU(i) {
-        if(u_db[i].e === 'benluc0606@gmail.com') return alert("Immunität!");
-        u_db[i].b = !u_db[i].b;
-        db.ref('users').set(u_db);
     }
 
     function delB(i) {
@@ -240,7 +225,7 @@
 
     function updateNews() {
         let feed = [];
-        if(b_db[0]) feed.push(`<div class="news-item"><b>Beweis:</b> ${b_db[0].n} gemeldet von ${b_db[0].by}.</div>`);
+        if(b_db[0]) feed.push(`<div class="news-item"><b>Beweis:</b> ${b_db[0].n} gemeldet von ${b_db[0].by || 'Unbekannt'}.</div>`);
         $('#news_feed').html(feed.join("") || 'Keine Aktivitäten.');
     }
 
@@ -273,17 +258,22 @@
     }
 
     function saveBeweis() {
-        // HIER WIRD DER ERSTELLER (currentUser.n) GESPEICHERT
         b_db.unshift({n: $('#f_name').val(), g: $('#f_grund').val(), f: tempFiles, by: currentUser.n});
         db.ref('beweise').set(b_db); nav('beweise');
     }
 
     function addUser() {
-        u_db.push({n: $('#a_n').val(), e: $('#a_e').val(), p: $('#a_p').val(), r: $('#a_r').val(), b: false});
+        u_db.push({n: $('#a_n').val(), e: $('#a_e').val(), p: $('#a_p').val(), r: $('#a_r').val()});
         db.ref('users').set(u_db);
     }
-    function delU(i) { if(confirm("User löschen?")) { u_db.splice(i,1); db.ref('users').set(u_db); } }
-    function nav(id) { $('.sec').addClass('hidden-section'); $('#p-'+id).removeClass('hidden-section'); }
+    function delU(i) { u_db.splice(i,1); db.ref('users').set(u_db); }
+    
+    function nav(id) { 
+        $('.sec').addClass('hidden-section'); 
+        $('#p-'+id).removeClass('hidden-section'); 
+        $('#main-nav li').removeClass('active');
+        $('#m-'+id).addClass('active');
+    }
 </script>
 </body>
 </html>
