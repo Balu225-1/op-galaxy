@@ -25,7 +25,6 @@
         .p-sup { color: #55ff55; font-weight: bold; }
         .search-box { margin-bottom: 15px; width: 100%; box-sizing: border-box; height: 40px !important; font-size: 16px !important; }
         
-        /* Punkt-Ladesymbol Styles */
         #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; text-align: center; padding-top: 250px; }
         .dots { display: inline-block; }
         .dots div { width: 15px; height: 15px; margin: 0 5px; background: #0088cc; border-radius: 50%; display: inline-block; animation: bounce 0.6s infinite alternate; }
@@ -77,7 +76,7 @@
 
         <div class="span9">
             <div id="p-home" class="well sec">
-                <h1>Dashboard</h1><hr>
+                <h1 id="welcome_msg">Dashboard</h1><hr>
                 <div class="row-fluid">
                     <div class="span4 info-card"><h3 id="stat_b">0</h3><small>Beweise</small></div>
                     <div class="span4 info-card"><h3 id="stat_u">0</h3><small>Mitglieder</small></div>
@@ -211,6 +210,14 @@
                 if(u.b) { $('#loader').hide(); alert("Dein Account ist gebannt!"); return; }
                 currentUser = u; $('#loginArea').hide(); $('#mainArea').removeClass('hidden-section');
                 if(u.r === 'Admin' || u.r === 'Owner') $('.admin-only').show();
+                
+                // Dashboard Begrüßung
+                let hr = new Date().getHours();
+                let greet = "Guten Tag";
+                if(hr < 11) greet = "Guten Morgen";
+                if(hr > 18) greet = "Guten Abend";
+                $('#welcome_msg').text(`${greet} (${u.r}) ${u.n}`);
+                
                 render();
             } else { alert("Login falsch!"); }
             $('#loader').hide();
