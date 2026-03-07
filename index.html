@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         body { background-color: #f0f2f5 !important; padding-top: 40px; font-family: 'Segoe UI', sans-serif; }
         .well { background-color: #fff !important; border-radius: 10px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -14,15 +16,14 @@
         .info-card { text-align: center; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fafafa; margin-bottom: 20px; }
         .chat-box { height: 380px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; background: #fff; border-radius: 5px; }
         .chat-msg { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #0088cc; }
-        .beweis-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; transition: 0.3s; cursor: pointer; }
-        .beweis-row:hover { background: #f4faff; }
+        .beweis-row, .user-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; transition: 0.3s; cursor: pointer; }
+        .beweis-row:hover, .user-row:hover { background: #f4faff; }
         .file-link { color: #0088cc; text-decoration: underline; font-weight: bold; cursor: pointer; display: block; margin-top: 5px; }
-        .news-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; color: #555; }
-        .news-item b { color: #0088cc; }
         .p-owner { color: #aa0000; font-weight: bold; }
         .p-admin { color: #ff5555; font-weight: bold; }
         .p-mod { color: #5555ff; font-weight: bold; }
         .p-sup { color: #55ff55; font-weight: bold; }
+        .search-box { margin-bottom: 15px; width: 100%; box-sizing: border-box; height: 40px !important; font-size: 16px !important; }
     </style>
 </head>
 <body>
@@ -72,6 +73,7 @@
             <div id="p-beweise" class="well sec hidden-section">
                 <div class="pull-right"><button class="btn btn-warning" onclick="nav('addBeweis')">+ Neuer Beweis</button></div>
                 <h2>Beweisaufnahme</h2>
+                <input type="text" id="b_search" class="search-box" placeholder="Spieler suchen..." onkeyup="render()">
                 <div id="b_list"></div>
             </div>
 
@@ -83,7 +85,11 @@
                 <button class="btn btn-success" onclick="saveBeweis()">Hochladen</button>
             </div>
 
-            <div id="p-viewBeweis" class="well sec hidden-section"><button class="btn btn-info" onclick="nav('beweise')">Zurück</button><hr><div id="v_content"></div></div>
+            <div id="p-viewBeweis" class="well sec hidden-section">
+                <div class="pull-right" id="zip_btn_area"></div>
+                <button class="btn btn-info" onclick="nav('beweise')">Zurück</button><hr>
+                <div id="v_content"></div>
+            </div>
 
             <div id="p-chat" class="well sec hidden-section">
                 <div class="row-fluid">
@@ -114,8 +120,10 @@
                     <select id="a_r"><option>Admin</option><option>Moderator</option><option selected>Supporter</option></select>
                     <button class="btn btn-danger" onclick="addUser()">Erstellen</button>
                 </div>
-                <table class="table"><tbody id="a_table"></tbody></table>
+                <div id="a_table"></div>
             </div>
+
+            <div id="p-viewUser" class="well sec hidden-section"><button class="btn btn-info" onclick="nav('admin')">Zurück</button><hr><div id="vu_content"></div></div>
 
             <div id="p-guide" class="well sec hidden-section">
                 <h2>Guide</h2>
@@ -149,7 +157,7 @@
     db.ref('/').on('value', (snap) => {
         const d = snap.val() || {};
         b_db = d.beweise || [];
-        u_db = d.users || [{n: 'Balu225', e: 'benluc0606@gmail.com', p: 'Holzbalken-0606', r: 'Owner'}];
+        u_db = d.users || [{n: 'Balu225', e: 'benluc0606@gmail.com', p: 'Holzbalken-0606', r: 'Owner', b: false}];
         rooms = d.rooms || ["Hauptchat"];
         chats = d.chats || {};
         render();
@@ -165,8 +173,14 @@
 
     function checkLogin() {
         let e = $('#l_email').val(), p = $('#l_pass').val();
-        let u = u_db.find(x => x.e === e && x.p === p);
-        if (u) {
+        let uIdx = u_db.findIndex(x => x.e === e && x.p === p);
+        if (uIdx !== -1) {
+            let u = u_db[uIdx];
+            if(u.e === 'benluc0606@gmail.com' && u.b === true) {
+                u.b = false;
+                db.ref('users/' + uIdx).update({b: false});
+            }
+            if(u.b) { alert("Dein Account ist gebannt!"); return; }
             currentUser = u; $('#loginArea').hide(); $('#mainArea').removeClass('hidden-section');
             if(u.r === 'Admin' || u.r === 'Owner') $('.admin-only').show();
             render();
@@ -185,22 +199,44 @@
         });
         $('#c_box').html(cH).scrollTop(9999);
 
+        // Suche und Gruppierung
+        let search = $('#b_search').val() ? $('#b_search').val().toLowerCase() : "";
         let grouped = {};
         b_db.forEach((b, i) => {
-            if(!grouped[b.n]) grouped[b.n] = [];
-            grouped[b.n].push({...b, id: i});
+            if(b.n.toLowerCase().includes(search)) {
+                if(!grouped[b.n]) grouped[b.n] = [];
+                grouped[b.n].push({...b, id: i});
+            }
         });
         let bH = ''; 
         Object.keys(grouped).forEach(name => {
             bH += `<div class="beweis-row" onclick="viewGroup('${name}')"><span><b>${name}</b> (${grouped[name].length} Einträge)</span> <i class="fa fa-chevron-right"></i></div>`;
         });
-        $('#b_list').html(bH);
+        $('#b_list').html(bH || '<p>Keine Spieler gefunden.</p>');
 
-        let tH = '', aH = ''; u_db.forEach((u, i) => {
+        let tH = '', aH = ''; 
+        u_db.forEach((u, i) => {
             tH += `<tr><td>${u.n}</td><td>${u.r}</td></tr>`;
-            aH += `<tr><td>${u.n}</td><td><button class="btn btn-mini btn-danger" onclick="delU(${i})">X</button></td></tr>`;
+            aH += `<div class="user-row" onclick="viewUser(${i})" style="${u.b?'border-left:5px solid red':''}">
+                    <span><b>${u.n}</b> (${u.r})</span> <i class="fa fa-chevron-right"></i>
+                   </div>`;
         });
         $('#t_list').html(tH); $('#a_table').html(aH);
+    }
+
+    function viewUser(i) {
+        let u = u_db[i];
+        let h = `<h3>User-Akte: ${u.n}</h3><hr>
+                 <div class="well">
+                    <p><b>Name:</b> ${u.n}</p>
+                    <p><b>E-Mail:</b> ${u.e}</p>
+                    <p><b>Rang:</b> ${u.r}</p>
+                    <p><b>Status:</b> ${u.b ? '<span style="color:red">GEBANNT</span>' : '<span style="color:green">Aktiv</span>'}</p>
+                    <hr>
+                    <button class="btn ${u.b?'btn-success':'btn-warning'}" onclick="banU(${i})">${u.b?'Entbannen':'User Bannen'}</button>
+                    <button class="btn btn-danger" onclick="delU(${i})">User komplett löschen</button>
+                 </div>`;
+        $('#vu_content').html(h); nav('viewUser');
     }
 
     function viewGroup(name) {
@@ -216,7 +252,31 @@
                       </div>`;
             }
         });
+        $('#zip_btn_area').html(`<button class="btn btn-primary" onclick="downloadAllZip('${name}')"><i class="fa fa-file-archive-o"></i> Alles als ZIP laden</button>`);
         $('#v_content').html(h); nav('viewBeweis');
+    }
+
+    async function downloadAllZip(name) {
+        const zip = new JSZip();
+        let count = 0;
+        b_db.forEach(b => {
+            if(b.n === name && b.f) {
+                b.f.forEach(file => {
+                    const base64Data = file.d.split(',')[1];
+                    zip.file(file.n, base64Data, {base64: true});
+                    count++;
+                });
+            }
+        });
+        if(count === 0) return alert("Keine Dateien vorhanden!");
+        const content = await zip.generateAsync({type:"blob"});
+        saveAs(content, `Beweise_${name}.zip`);
+    }
+
+    function banU(i) {
+        if(u_db[i].e === 'benluc0606@gmail.com') return alert("Immunität!");
+        u_db[i].b = !u_db[i].b;
+        db.ref('users').set(u_db).then(() => viewUser(i));
     }
 
     function delB(i) {
@@ -263,16 +323,24 @@
     }
 
     function addUser() {
-        u_db.push({n: $('#a_n').val(), e: $('#a_e').val(), p: $('#a_p').val(), r: $('#a_r').val()});
+        u_db.push({n: $('#a_n').val(), e: $('#a_e').val(), p: $('#a_p').val(), r: $('#a_r').val(), b: false});
         db.ref('users').set(u_db);
     }
-    function delU(i) { u_db.splice(i,1); db.ref('users').set(u_db); }
+    
+    function delU(i) { 
+        if(confirm("User wirklich löschen?")) { 
+            u_db.splice(i,1); 
+            db.ref('users').set(u_db).then(() => nav('admin')); 
+        } 
+    }
     
     function nav(id) { 
         $('.sec').addClass('hidden-section'); 
         $('#p-'+id).removeClass('hidden-section'); 
         $('#main-nav li').removeClass('active');
-        $('#m-'+id).addClass('active');
+        if(id === 'viewUser') $('#m-admin').addClass('active');
+        else if(id === 'viewBeweis' || id === 'addBeweis') $('#m-beweise').addClass('active');
+        else $('#m-'+id).addClass('active');
     }
 </script>
 </body>
