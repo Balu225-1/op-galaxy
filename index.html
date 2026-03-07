@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>OPGALAXY Team - Cloud Sync</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5 !important; padding-top: 40px; font-family: 'Segoe UI', sans-serif; }
+        .well { background-color: #fff !important; border-radius: 10px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .hidden-section { display: none !important; }
+        .nav-list > .active > a { background-color: #0088cc !important; }
+        .info-card { text-align: center; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fafafa; margin-bottom: 20px; }
+        .chat-box { height: 380px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; background: #fff; border-radius: 5px; }
+        .chat-msg { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #0088cc; }
+        .beweis-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; transition: 0.3s; cursor: pointer; }
+        .beweis-row:hover { background: #f4faff; }
+        .file-link { color: #0088cc; text-decoration: underline; font-weight: bold; cursor: pointer; display: block; margin-top: 5px; }
+        .news-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; color: #555; }
+        .news-item b { color: #0088cc; }
+        .p-owner { color: #aa0000; font-weight: bold; }
+        .p-admin { color: #ff5555; font-weight: bold; }
+        .p-mod { color: #5555ff; font-weight: bold; }
+        .p-sup { color: #55ff55; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="loginArea" class="container">
+    <div class="well" style="max-width: 380px; margin: 80px auto; padding: 40px;">
+        <h2 style="text-align:center; color:#0088cc;">OPGALAXY TEAM</h2>
+        <hr>
+        <input type="text" id="l_email" class="input-block-level" placeholder="E-Mail">
+        <input type="password" id="l_pass" class="input-block-level" placeholder="Passwort">
+        <button class="btn btn-large btn-primary btn-block" onclick="checkLogin()">Einloggen</button>
+    </div>
+</div>
+
+<div id="mainArea" class="container-fluid hidden-section">
+    <div class="row-fluid">
+        <div class="span3">
+            <div class="well sidebar-nav">
+                <ul class="nav nav-list">
+                    <li class="nav-header">Menü</li>
+                    <li class="active" id="m-home"><a href="#" onclick="nav('home')"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+                    <li id="m-team"><a href="#" onclick="nav('team')"><i class="fa fa-users"></i> Teamliste</a></li>
+                    <li id="m-guide"><a href="#" onclick="nav('guide')"><i class="fa fa-book"></i> Guide</a></li>
+                    <li class="nav-header">Daten</li>
+                    <li id="m-beweise"><a href="#" onclick="nav('beweise')"><i class="fa fa-video-camera"></i> Beweisaufnahme</a></li>
+                    <li id="m-chat"><a href="#" onclick="nav('chat')"><i class="fa fa-comments"></i> Chat</a></li>
+                    <li class="nav-header admin-only" style="color:red; display:none;">Admin-Zentrale</li>
+                    <li id="m-admin" class="admin-only" style="display:none;"><a href="#" onclick="nav('admin')"><i class="fa fa-cogs"></i> User-Verwaltung</a></li>
+                    <li class="divider"></li>
+                    <li><a href="#" onclick="location.reload()" style="color:red;"><i class="fa fa-power-off"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="span9">
+            <div id="p-home" class="well sec">
+                <h1>Dashboard</h1><hr>
+                <div class="row-fluid">
+                    <div class="span4 info-card"><h3 id="stat_b">0</h3><small>Beweise</small></div>
+                    <div class="span4 info-card"><h3 id="stat_u">0</h3><small>Mitglieder</small></div>
+                    <div class="span4 info-card"><h3 style="color:green;">Aktiv</h3><small>Cloud Sync</small></div>
+                </div>
+                <h4>Letzte Aktivitäten:</h4>
+                <div id="news_feed" class="well" style="max-height: 200px; overflow-y: auto;"></div>
+            </div>
+
+            <div id="p-beweise" class="well sec hidden-section">
+                <div class="pull-right"><button class="btn btn-warning" onclick="nav('addBeweis')">+ Neuer Beweis</button></div>
+                <h2>Beweisaufnahme</h2>
+                <div id="b_list"></div>
+            </div>
+
+            <div id="p-addBeweis" class="well sec hidden-section">
+                <h3>Beweis hochladen</h3><hr>
+                <label>Spielername:</label><input type="text" id="f_name" class="span12">
+                <label>Grund:</label><input type="text" id="f_grund" class="span12">
+                <label>Dateien:</label><input type="file" id="f_file" class="span12" multiple onchange="handleFiles(this)">
+                <button class="btn btn-success" onclick="saveBeweis()">Hochladen</button>
+            </div>
+
+            <div id="p-viewBeweis" class="well sec hidden-section"><button class="btn btn-info" onclick="nav('beweise')">Zurück</button><hr><div id="v_content"></div></div>
+
+            <div id="p-chat" class="well sec hidden-section">
+                <div class="row-fluid">
+                    <div class="span3">
+                        <ul class="nav nav-pills nav-stacked" id="r_list"></ul>
+                        <button class="btn btn-mini btn-block btn-info" onclick="addRoom()">+ Neuer Kanal</button>
+                    </div>
+                    <div class="span9">
+                        <div class="chat-box" id="c_box"></div>
+                        <div class="input-append" style="width:100%">
+                            <input type="text" id="c_in" style="width:70%" placeholder="Schreibe etwas...">
+                            <button class="btn" onclick="$('#c_file_input').click()"><i class="fa fa-paperclip"></i></button>
+                            <button class="btn btn-primary" onclick="sendChat()">Senden</button>
+                        </div>
+                        <input type="file" id="c_file_input" style="display:none" onchange="handleChatFile(this)">
+                    </div>
+                </div>
+            </div>
+
+            <div id="p-team" class="well sec hidden-section"><h2>Team</h2><table class="table table-bordered"><tbody id="t_list"></tbody></table></div>
+            
+            <div id="p-admin" class="well sec hidden-section">
+                <h2>User-Verwaltung</h2>
+                <div class="well">
+                    <input type="text" id="a_n" placeholder="Name">
+                    <input type="text" id="a_e" placeholder="E-Mail">
+                    <input type="text" id="a_p" placeholder="Passwort">
+                    <select id="a_r"><option>Admin</option><option>Moderator</option><option selected>Supporter</option></select>
+                    <button class="btn btn-danger" onclick="addUser()">Erstellen</button>
+                </div>
+                <table class="table"><tbody id="a_table"></tbody></table>
+            </div>
+
+            <div id="p-guide" class="well sec hidden-section">
+                <h2>Guide</h2>
+                <p>Preise um 70% erhöht.</p>
+                <p>§1-§5 Regelwerk vollständig aktiv.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAAmN4Uo6xIc3GEA-uyIH7yDbydxaLEkew",
+        authDomain: "opgalaxy-f8320.firebaseapp.com",
+        projectId: "opgalaxy-f8320",
+        storageBucket: "opgalaxy-f8320.firebasestorage.app",
+        messagingSenderId: "145262698290",
+        appId: "1:145262698290:web:88871d54d1b7727e28812b",
+        databaseURL: "https://opgalaxy-f8320-default-rtdb.firebaseio.com"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let b_db = [], u_db = [], rooms = ["Hauptchat"], chats = {}, curRoom = "Hauptchat", currentUser = null, tempFiles = [];
+
+    db.ref('/').on('value', (snap) => {
+        const d = snap.val() || {};
+        b_db = d.beweise || [];
+        u_db = d.users || [{n: 'Balu225', e: 'benluc0606@gmail.com', p: 'Holzbalken-0606', r: 'Owner', b: false}];
+        rooms = d.rooms || ["Hauptchat"];
+        chats = d.chats || {};
+        render();
+        updateNews();
+    });
+
+    function getPrefix(role) {
+        if(role === 'Owner') return '<span class="p-owner">[OWNER]</span> ';
+        if(role === 'Admin') return '<span class="p-admin">[ADMIN]</span> ';
+        if(role === 'Moderator') return '<span class="p-mod">[MOD]</span> ';
+        return '<span class="p-sup">[SUP]</span> ';
+    }
+
+    function checkLogin() {
+        let e = $('#l_email').val(), p = $('#l_pass').val();
+        let uIdx = u_db.findIndex(x => x.e === e && x.p === p);
+        if (uIdx !== -1) {
+            let u = u_db[uIdx];
+            if(u.e === 'benluc0606@gmail.com' && u.b === true) {
+                u.b = false;
+                db.ref('users/' + uIdx).update({b: false});
+            }
+            if(u.b) { alert("Dein Account ist gebannt!"); return; }
+            currentUser = u; $('#loginArea').hide(); $('#mainArea').removeClass('hidden-section');
+            if(u.r === 'Admin' || u.r === 'Owner') $('.admin-only').show();
+            render();
+        } else alert("Login falsch!");
+    }
+
+    function render() {
+        $('#stat_b').text(b_db.length); $('#stat_u').text(u_db.length);
+        let rH = ''; rooms.forEach(r => rH += `<li class="${curRoom===r?'active':''}"><a href="#" onclick="curRoom='${r}';render();">${r}</a></li>`);
+        $('#r_list').html(rH);
+
+        let cH = ''; (chats[curRoom]||[]).forEach(m => {
+            let uData = u_db.find(x => x.n === m.u) || {r: 'Supporter'};
+            let fH = (m.f || []).map(f => `<br><a href="${f.d}" target="_blank" class="file-link"><i class="fa fa-paperclip"></i> ${f.n}</a>`).join("");
+            cH += `<div class="chat-msg">${getPrefix(uData.r)}<b>${m.u}:</b> ${m.t}${fH}</div>`;
+        });
+        $('#c_box').html(cH).scrollTop(9999);
+
+        let grouped = {};
+        b_db.forEach((b, i) => {
+            if(!grouped[b.n]) grouped[b.n] = [];
+            grouped[b.n].push({...b, id: i});
+        });
+        let bH = ''; 
+        Object.keys(grouped).forEach(name => {
+            bH += `<div class="beweis-row" onclick="viewGroup('${name}')"><span><b>${name}</b> (${grouped[name].length} Einträge)</span> <i class="fa fa-chevron-right"></i></div>`;
+        });
+        $('#b_list').html(bH);
+
+        let tH = '', aH = ''; u_db.forEach((u, i) => {
+            tH += `<tr><td>${u.n}</td><td>${u.r}</td></tr>`;
+            aH += `<tr style="${u.b?'background:#fff0f0':''}"><td>${u.n}</td><td>
+                <button class="btn btn-mini ${u.b?'btn-success':'btn-warning'}" onclick="banU(${i})">${u.b?'Entbannen':'Bannen'}</button>
+                <button class="btn btn-mini btn-danger" onclick="delU(${i})">Löschen</button></td></tr>`;
+        });
+        $('#t_list').html(tH); $('#a_table').html(aH);
+    }
+
+    function viewGroup(name) {
+        let h = `<h3>Akte: ${name}</h3><hr>`;
+        b_db.forEach((b, i) => {
+            if(b.n === name) {
+                let fH = (b.f || []).map(f => `<a href="${f.d}" target="_blank" class="file-link">${f.n}</a>`).join("");
+                // HIER WIRD JETZT DER ERSTELLER ANGEZEIGT
+                h += `<div class="well">
+                        <p><b>Grund:</b> ${b.g}</p>
+                        <p><small>Erstellt von: <b>${b.by || 'Unbekannt'}</b></small></p>
+                        ${fH}
+                        <button class="btn btn-mini btn-danger" style="margin-top:10px;" onclick="delB(${i})">Löschen</button>
+                      </div>`;
+            }
+        });
+        $('#v_content').html(h); nav('viewBeweis');
+    }
+
+    function banU(i) {
+        if(u_db[i].e === 'benluc0606@gmail.com') return alert("Immunität!");
+        u_db[i].b = !u_db[i].b;
+        db.ref('users').set(u_db);
+    }
+
+    function delB(i) {
+        if(confirm("Löschen?")) { b_db.splice(i,1); db.ref('beweise').set(b_db).then(() => nav('beweise')); }
+    }
+
+    function updateNews() {
+        let feed = [];
+        if(b_db[0]) feed.push(`<div class="news-item"><b>Beweis:</b> ${b_db[0].n} gemeldet von ${b_db[0].by}.</div>`);
+        $('#news_feed').html(feed.join("") || 'Keine Aktivitäten.');
+    }
+
+    function addRoom() {
+        let n = prompt("Kanal-Name:");
+        if(n) { rooms.push(n); db.ref('rooms').set(rooms); }
+    }
+
+    function handleChatFile(input) {
+        let f = input.files[0];
+        let r = new FileReader();
+        r.onload = (e) => sendChat(`Datei: ${f.name}`, [{n: f.name, d: e.target.result}]);
+        r.readAsDataURL(f);
+    }
+
+    function sendChat(txt, files) {
+        if(!chats[curRoom]) chats[curRoom] = [];
+        chats[curRoom].push({u: currentUser.n, t: txt || $('#c_in').val(), f: files || []});
+        db.ref('chats/' + curRoom).set(chats[curRoom]);
+        $('#c_in').val('');
+    }
+
+    function handleFiles(i) {
+        tempFiles = [];
+        for(let f of i.files) {
+            let r = new FileReader();
+            r.onload = (e) => tempFiles.push({n:f.name, d:e.target.result});
+            r.readAsDataURL(f);
+        }
+    }
+
+    function saveBeweis() {
+        // HIER WIRD DER ERSTELLER (currentUser.n) GESPEICHERT
+        b_db.unshift({n: $('#f_name').val(), g: $('#f_grund').val(), f: tempFiles, by: currentUser.n});
+        db.ref('beweise').set(b_db); nav('beweise');
+    }
+
+    function addUser() {
+        u_db.push({n: $('#a_n').val(), e: $('#a_e').val(), p: $('#a_p').val(), r: $('#a_r').val(), b: false});
+        db.ref('users').set(u_db);
+    }
+    function delU(i) { if(confirm("User löschen?")) { u_db.splice(i,1); db.ref('users').set(u_db); } }
+    function nav(id) { $('.sec').addClass('hidden-section'); $('#p-'+id).removeClass('hidden-section'); }
+</script>
+</body>
+</html>
