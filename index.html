@@ -9,10 +9,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        body { background-color: #f0f2f5 !important; padding-top: 40px; font-family: 'Segoe UI', sans-serif; }
-        .well { background-color: #fff !important; border-radius: 10px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { background-color: #f5f5f5 !important; padding-top: 0 !important; margin: 0; font-family: 'Segoe UI', sans-serif; }
         .hidden-section { display: none !important; }
+        
+        #mainArea { padding: 0 40px !important; min-height: 100vh; }
+        #mainArea > .row-fluid { background: #fff; margin: 0 auto; padding: 0; border-radius: 0 !important; box-shadow: 0 0 20px rgba(0,0,0,0.05); display: flex; min-height: 100vh; width: 100%; max-width: 1400px; }
+        
+        /* Navigationsleiste fest am Rand */
+        .span3 { margin-left: 0 !important; width: 250px !important; background-color: #e5e5e5 !important; border-right: 1px solid #d0d0d0; }
+        .span3 .sidebar-nav { background-color: transparent !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: 20px 0; margin: 0; }
+        
+        /* Rechter Inhaltsbereich */
+        .span9 { width: calc(100% - 250px) !important; margin: 0 !important; padding: 30px !important; background: #fff; }
+        .span9 .well.sec { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; }
+        
+        .well { background-color: #fff !important; border-radius: 0 !important; box-shadow: none !important; border: 1px solid #eee; }
+        .btn { border-radius: 4px !important; }
         .nav-list > .active > a { background-color: #0088cc !important; }
+        
         .info-card { text-align: center; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fafafa; margin-bottom: 20px; }
         .chat-box { height: 380px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; background: #fff; border-radius: 5px; }
         .chat-msg { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #0088cc; }
@@ -26,11 +40,26 @@
         .search-box { margin-bottom: 15px; width: 100%; box-sizing: border-box; height: 40px !important; font-size: 16px !important; }
         
         #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; text-align: center; padding-top: 250px; }
-        .dots { display: inline-block; }
-        .dots div { width: 15px; height: 15px; margin: 0 5px; background: #0088cc; border-radius: 50%; display: inline-block; animation: bounce 0.6s infinite alternate; }
-        .dots div:nth-child(2) { animation-delay: 0.2s; }
-        .dots div:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
+        .win-spinner { position: relative; width: 70px; height: 70px; margin: 0 auto; animation: spin-circle 1.5s linear infinite; }
+        .win-spinner div { position: absolute; width: 100%; height: 100%; }
+        .win-spinner div:before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #0088cc; border-radius: 50%; display: block; }
+        .win-spinner div:nth-child(1) { transform: rotate(0deg); }
+        .win-spinner div:nth-child(1):before { width: 18px; height: 18px; opacity: 1; }
+        .win-spinner div:nth-child(2) { transform: rotate(-25deg); }
+        .win-spinner div:nth-child(2):before { width: 15px; height: 15px; opacity: 0.9; }
+        .win-spinner div:nth-child(3) { transform: rotate(-50deg); }
+        .win-spinner div:nth-child(3):before { width: 12px; height: 12px; opacity: 0.8; }
+        .win-spinner div:nth-child(4) { transform: rotate(-75deg); }
+        .win-spinner div:nth-child(4):before { width: 10px; height: 10px; opacity: 0.7; }
+        .win-spinner div:nth-child(5) { transform: rotate(-100deg); }
+        .win-spinner div:nth-child(5):before { width: 8px; height: 8px; opacity: 0.5; }
+        .win-spinner div:nth-child(6) { transform: rotate(-125deg); }
+        .win-spinner div:nth-child(6):before { width: 6px; height: 6px; opacity: 0.4; }
+        .win-spinner div:nth-child(7) { transform: rotate(-150deg); }
+        .win-spinner div:nth-child(7):before { width: 4px; height: 4px; opacity: 0.2; }
+        .win-spinner div:nth-child(8) { transform: rotate(-175deg); }
+        .win-spinner div:nth-child(8):before { width: 3px; height: 3px; opacity: 0.1; }
+        @keyframes spin-circle { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .room-item { position: relative; display: flex; align-items: center; justify-content: space-between; }
         .del-room { color: #ff5555; cursor: pointer; padding: 0 5px; font-weight: bold; }
@@ -40,17 +69,20 @@
 <body>
 
 <div id="loader">
-    <div class="dots"><div></div><div></div><div></div></div>
-    <p style="color:white; margin-top:20px;">Wird Geladen...</p>
+    <div class="win-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+    <p style="color:white; margin-top:20px; font-size:18px;">Wird geladen...</p>
 </div>
 
 <div id="loginArea" class="container">
-    <div class="well" style="max-width: 380px; margin: 80px auto; padding: 40px;">
-        <h2 style="text-align:center; color:#0088cc;">OPGALAXY TEAM</h2>
-        <hr>
-        <input type="text" id="l_email" class="input-block-level" placeholder="E-Mail">
-        <input type="password" id="l_pass" class="input-block-level" placeholder="Passwort">
-        <button class="btn btn-large btn-primary btn-block" onclick="checkLogin()">Einloggen</button>
+    <div class="well" style="max-width: 380px; margin: 80px auto; padding: 40px; position: relative; overflow: hidden;">
+        <i class="fa fa-key" style="position: absolute; font-size: 14rem; color: #eaeaea; top: 50%; left: 50%; z-index: 0; transform: translate(-50%, -50%) rotate(-15deg);"></i>
+        <div style="position: relative; z-index: 1;">
+            <h2 style="text-align:center; color:#0088cc;">OPGALAXY TEAM</h2>
+            <hr>
+            <input type="text" id="l_email" class="input-block-level" placeholder="E-Mail">
+            <input type="password" id="l_pass" class="input-block-level" placeholder="Passwort">
+            <button class="btn btn-large btn-primary btn-block" onclick="checkLogin()">Einloggen</button>
+        </div>
     </div>
 </div>
 
@@ -66,7 +98,7 @@
                     <li class="nav-header">Daten</li>
                     <li id="m-beweise"><a href="#" onclick="nav('beweise')"><i class="fa fa-video-camera"></i> Beweisaufnahme</a></li>
                     <li id="m-chat"><a href="#" onclick="nav('chat')"><i class="fa fa-comments"></i> Chat</a></li>
-                    <li id="m-sprache"><a href="https://balu225-1.github.io/voice-opgalaxy" onclick="nav('')"><i class="fa fa-comments"></i> Sprachchat</a></li>
+                    <li id="m-sprache"><a href="https://balu225-1.github.io/voice-opgalaxy" onclick="nav('')"><i class="fa fa-microphone"></i> Sprachchat</a></li>
                     <li class="nav-header admin-only" style="color:red; display:none;">Admin-Zentrale</li>
                     <li id="m-admin" class="admin-only" style="display:none;"><a href="#" onclick="nav('admin')"><i class="fa fa-cogs"></i> User-Verwaltung</a></li>
                     <li class="divider"></li>
@@ -97,9 +129,18 @@
             <div id="p-addBeweis" class="well sec hidden-section">
                 <div class="pull-right"><button class="btn btn-info" onclick="nav('beweise')">Zurück</button></div>
                 <h3>Beweis hochladen</h3><hr>
-                <label>Spielername:</label><input type="text" id="f_name" class="span12">
-                <label>Grund:</label><input type="text" id="f_grund" class="span12">
-                <label>Dateien:</label><input type="file" id="f_file" class="span12" multiple onchange="handleFiles(this)">
+                <label>Spielername:</label><input type="text" id="f_name" class="span12" placeholder="Spielername...">
+                <label>Grund:</label><input type="text" id="f_grund" class="span12" placeholder="Verstoß / Grund...">
+                <label>Bestrafung:</label>
+                <select id="f_strafe" class="span12">
+                    <option value="">-- Keine Angabe --</option>
+                    <option value="Ban">Ban</option>
+                    <option value="Mute">Mute</option>
+                    <option value="Kick">Kick</option>
+                    <option value="Verwarnung">Verwarnung</option>
+                </select>
+                <label>Kommentar:</label><textarea id="f_kommentar" class="span12" rows="3" placeholder="Zusätzliche Informationen eintragen..."></textarea>
+                <label>Dateien hinzufügen:</label><input type="file" id="f_file" class="span12" multiple onchange="handleFiles(this)">
                 <button class="btn btn-success" onclick="saveBeweis()">Hochladen</button>
             </div>
 
@@ -459,6 +500,21 @@ Absatz 20.3: Die Umgehung dieser Regel ist verboten und kann sanktioniert werden
         setTimeout(() => { location.reload(); }, 1000);
     }
 
+    let inactivityTimer;
+    function resetTimer() {
+        clearTimeout(inactivityTimer);
+        if(currentUser) {
+            inactivityTimer = setTimeout(() => {
+                alert("Du wurdest wegen 5 Minuten Inaktivität automatisch ausgeloggt.");
+                doLogout();
+            }, 300000); 
+        }
+    }
+    document.addEventListener('mousemove', resetTimer);
+    document.addEventListener('keypress', resetTimer);
+    document.addEventListener('click', resetTimer);
+    document.addEventListener('scroll', resetTimer);
+
     function render() {
         $('#stat_b').text(b_db.length); $('#stat_u').text(u_db.length);
         $('#chat_title').text("Kanal: " + curRoom);
@@ -473,10 +529,14 @@ Absatz 20.3: Die Umgehung dieser Regel ist verboten und kann sanktioniert werden
         });
         $('#r_list').html(rH);
 
-        let cH = ''; (chats[curRoom]||[]).forEach(m => {
+        let cH = ''; (chats[curRoom]||[]).forEach((m, idx) => {
             let uData = u_db.find(x => x.n === m.u) || {r: 'Supporter'};
-            let fH = (m.f || []).map(f => `<br><a href="${f.d}" target="_blank" class="file-link"><i class="fa fa-paperclip"></i> ${f.n}</a>`).join("");
-            cH += `<div class="chat-msg">${getPrefix(uData.r)}<b>${m.u}:</b> ${m.t}${fH}</div>`;
+            let fH = (m.f || []).map(f => `<br><a href="${f.d}" download="${f.n}" target="_blank" class="file-link"><i class="fa fa-download"></i> ${f.n} ansehen/herunterladen</a>`).join("");
+            let delBtn = (currentUser && (currentUser.r === 'Admin' || currentUser.r === 'Owner' || currentUser.n === m.u)) 
+                            ? `<span class="pull-right" style="cursor:pointer; color:#dc3545; font-size:14px;" onclick="delChatMsg('${curRoom}', ${idx})" title="Nachricht löschen"><i class="fa fa-trash"></i></span>` 
+                            : '';
+            let tStr = m.time ? `<span style="color:#aaa; font-size:11px; margin-left:8px;">${m.time}</span>` : '';
+            cH += `<div class="chat-msg">${delBtn}${getPrefix(uData.r)}<b>${m.u}</b>${tStr}:<br>${m.t}${fH}</div>`;
         });
         $('#c_box').html(cH).scrollTop(9999);
 
@@ -540,16 +600,30 @@ Absatz 20.3: Die Umgehung dieser Regel ist verboten und kann sanktioniert werden
         $('#vu_content').html(h); nav('viewUser');
     }
 
+    function toggleAkte(id) {
+        $('#akte_' + id).slideToggle(200);
+    }
+
     function viewGroup(name) {
         let h = `<h3>Akte: ${name}</h3><hr>`;
         b_db.forEach((b, i) => {
             if(b.n === name) {
                 let fH = (b.f || []).map(f => `<div style="margin-top:5px;"><a href="${f.d}" download="${f.n}" class="btn btn-mini btn-info"><i class="fa fa-download"></i> ${f.n} downloaden</a></div>`).join("");
-                h += `<div class="well">
-                        <p><b>Grund:</b> ${b.g}</p>
-                        <p><small>Erstellt von: <b>${b.by || 'Unbekannt'}</b></small></p>
-                        ${fH}
-                        <div style="margin-top:10px;"><button class="btn btn-mini btn-danger" onclick="delB(${i})">Eintrag löschen</button></div>
+                let strafeStr = b.s ? `<p><b>Bestrafung:</b> <span class="label label-important" style="font-size:12px;">${b.s}</span></p>` : '';
+                let strafeBadge = b.s ? `<span style="color:#dc3545; font-size:12px; margin-left:10px;">[${b.s}]</span>` : '';
+                let cmt = b.k ? `<p><b>Kommentar:</b><br>${b.k.replace(/\\n/g, '<br>')}</p>` : '';
+                h += `<div class="well" style="padding: 10px; margin-bottom: 10px;">
+                        <div style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleAkte(${i})">
+                            <strong style="margin: 0; color: #333; font-size: 15px;">Grund: ${b.g || 'Keine Angabe'} ${strafeBadge}</strong>
+                            <i class="fa fa-chevron-down" style="color: #666;"></i>
+                        </div>
+                        <div id="akte_${i}" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                            ${strafeStr}
+                            ${cmt}
+                            <p><small>Erstellt von: <b>${b.by || 'Unbekannt'}</b></small></p>
+                            ${fH}
+                            <div style="margin-top:10px;"><button class="btn btn-mini btn-danger" onclick="delB(${i})">Eintrag löschen</button></div>
+                        </div>
                       </div>`;
             }
         });
@@ -602,9 +676,19 @@ Absatz 20.3: Die Umgehung dieser Regel ist verboten und kann sanktioniert werden
         r.readAsDataURL(f);
     }
 
+    function delChatMsg(room, idx) {
+        if(confirm("Nachricht wirklich löschen?")) {
+            chats[room].splice(idx, 1);
+            db.ref('chats/' + room).set(chats[room]);
+            render();
+        }
+    }
+
     function sendChat(txt, files) {
         if(!chats[curRoom]) chats[curRoom] = [];
-        chats[curRoom].push({u: currentUser.n, t: txt || $('#c_in').val(), f: files || []});
+        let now = new Date();
+        let tStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        chats[curRoom].push({u: currentUser.n, t: txt || $('#c_in').val(), f: files || [], time: tStr});
         db.ref('chats/' + curRoom).set(chats[curRoom]);
         $('#c_in').val('');
     }
@@ -619,8 +703,11 @@ Absatz 20.3: Die Umgehung dieser Regel ist verboten und kann sanktioniert werden
     }
 
     function saveBeweis() {
-        b_db.unshift({n: $('#f_name').val(), g: $('#f_grund').val(), f: tempFiles, by: currentUser.n});
-        db.ref('beweise').set(b_db); nav('beweise');
+        if(!$('#f_name').val() || !$('#f_grund').val()) return alert("Spielername und Grund werden benötigt!");
+        b_db.unshift({n: $('#f_name').val(), g: $('#f_grund').val(), k: $('#f_kommentar').val(), s: $('#f_strafe').val(), f: tempFiles, by: currentUser.n});
+        db.ref('beweise').set(b_db); 
+        $('#f_name').val(''); $('#f_grund').val(''); $('#f_kommentar').val(''); $('#f_strafe').val(''); $('#f_file').val(''); tempFiles = [];
+        nav('beweise');
     }
 
     function addUser() {
@@ -646,9 +733,4 @@ Absatz 20.3: Die Umgehung dieser Regel ist verboten und kann sanktioniert werden
 </script>
 </body>
 </html>
-
-
-
-
-
 
